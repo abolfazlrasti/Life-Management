@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../ui/Dashbord/Dashbord_view.dart';
 import '../ui/Gym/Gym_view.dart';
 import '../ui/Money/Money_view.dart';
-import '../ui/profile/profile_view.dart';
+import '../ui/settings/settings_view.dart';
 import '../ui/style/Style_view.dart';
 import '../ui/navigation/navigationBar.dart';
 import '../ui/daily/daily.dart';
@@ -15,7 +15,7 @@ final Map<String, WidgetBuilder> routes = {
   Moneyview.routeName: (context) => const Moneyview(),
   GymView.routeName: (context) => const GymView(),
   StyleView.routeName: (context) => const StyleView(),
-  ProfileView.routeName: (context) => const ProfileView(),
+  SettingsView.routeName: (context) => const SettingsView(),
   Navigationbarview.routeName: (context) => const Navigationbarview(),
   DailyView.routeName: (context) => const DailyView(),
   CalendarView.routeName: (context) => const CalendarView(),
@@ -27,5 +27,5 @@ const List<String> navigationRoutes = [
   '/Money',
   '/Gym',
   '/Style',
-  '/profile',
+  '/settings',
 ];

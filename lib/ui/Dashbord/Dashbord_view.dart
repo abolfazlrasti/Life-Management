@@ -21,27 +21,37 @@ class DashbordView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextButton(
-              onPressed: () {},
-              child: Text(
+            TextButton.icon(
+              icon: Icon(
+                Icons.add_circle_outline_rounded,
+                size: 22,
+                color: Colors.black87,
+              ),
+              label: Text(
                 'Add Activity',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontFamily: 'inter',
                   color: Colors.black87,
                 ),
               ),
-              style: TextButton.styleFrom(backgroundColor: Colors.white),
+              onPressed: () {},
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white,
+                elevation: 2,
+                shadowColor: Colors.white,
+                side: BorderSide(color: Colors.white60, width: 7),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadiusGeometry.circular(16),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.center,
-              child: SizedBox(
-                width: 180,
-                child: Text(
-                  'Whatever you have in mind for today, start right here.',
-                  style: TextStyle(fontSize: 14, fontFamily: 'inter'),
-                ),
+              child: Text(
+                'Add your new activity',
+                style: TextStyle(fontSize: 14, fontFamily: 'inter'),
               ),
             ),
           ],

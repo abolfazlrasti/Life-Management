@@ -111,10 +111,10 @@ class _NavigationbarviewState extends State<Navigationbarview>
       icon: Symbols.fitness_center_rounded,
       route: '/Gym',
     ),
-    const _NavItem(
-      label: 'Profile',
-      icon: Symbols.person_rounded,
-      route: '/profile',
+const _NavItem(
+      label: 'Settings',
+      icon: Symbols.settings_rounded,
+      route: '/settings',
     ),
     const _NavItem(
       label: 'Style',

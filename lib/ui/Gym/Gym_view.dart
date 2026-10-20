@@ -17,13 +17,43 @@ class GymView extends StatelessWidget {
           ),
         )),
       body: Center(
-        child: Text(
-          'Welcome to Page',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'inter',
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton.icon(
+              icon: Icon(
+                Icons.add_circle_outline_rounded,
+                size: 22,
+                color: Colors.black87,
+              ),
+              label: Text(
+                'Add Activity',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontFamily: 'inter',
+                  color: Colors.black87,
+                ),
+              ),
+              onPressed: () {},
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white,
+                elevation: 2,
+                shadowColor: Colors.white,
+                side: BorderSide(color: Colors.white60, width: 7),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadiusGeometry.circular(16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.center,
+              child: Text(
+                'Add your new activity',
+                style: TextStyle(fontSize: 14, fontFamily: 'inter'),
+              ),
+            ),
+          ],
         ),
       ),
     );

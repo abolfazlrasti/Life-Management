@@ -28,7 +28,7 @@ class CalendarView extends StatelessWidget {
                 color: Colors.black87,
               ),
               label: Text(
-                'Add Activity',
+                'Add Date',
                 style: TextStyle(
                   fontSize: 18,
                   fontFamily: 'inter',

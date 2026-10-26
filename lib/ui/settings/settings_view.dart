@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'account/profile_view.dart';
 import 'Subscription/sub_view.dart';
@@ -13,6 +16,12 @@ abstract final class _C {
   static const danger = Color(0xFFFC6358);
   static const accent = Color(0xFFFFFFFF);
   static const fontFamily = 'inter';
+
+  // ---- Android 17 style glass (same values as the nav bar) -------------
+  static const glassTop = Color(0x99262628);
+  static const glassBottom = Color(0x8019191A);
+  static const glassBorder = Color(0x1FFFFFFF);
+  static const glassSelected = Color(0x26FFFFFF);
 }
 
 const double _kMaxWidth = 340;
@@ -22,20 +31,74 @@ const double _kTilePadding = 20;
 const double _kIconSize = 24;
 const double _kNavBarSpace = 52 + 8 + 24;
 
-enum _DisplayMode { automatic, light, dark }
+enum _DisplayMode {
+  automatic('Automatic', Icons.brightness_auto_rounded),
+  light('Light', Icons.light_mode_rounded),
+  dark('Dark', Icons.dark_mode_rounded);
+
+  final String label;
+  final IconData icon;
+  const _DisplayMode(this.label, this.icon);
+}
+
+enum _Lang {
+  english('English'),
+  persian('فارسی');
+
+  final String label;
+  const _Lang(this.label);
+}
 
 class _Item {
   final String label;
+  final String? value; // small muted text before the chevron
   final bool external;
   final VoidCallback? onTap;
 
-  const _Item(this.label, {this.external = false, this.onTap});
+  const _Item(this.label, {this.value, this.external = false, this.onTap});
 }
 
-class SettingsView extends StatelessWidget {
+class SettingsView extends StatefulWidget {
   static String routeName = '/settings';
 
   const SettingsView({super.key});
+
+  @override
+  State<SettingsView> createState() => _SettingsViewState();
+}
+
+class _SettingsViewState extends State<SettingsView> {
+  _Lang _language = _Lang.english;
+  _DisplayMode _displayMode = _DisplayMode.automatic;
+
+  Future<void> _pickLanguage() async {
+    final result = await _showGlassSheet<_Lang>(
+      context,
+      _ChoiceSheet<_Lang>(
+        title: 'Language',
+        selected: _language,
+        options: [
+          for (final l in _Lang.values) _Option(value: l, label: l.label),
+        ],
+      ),
+    );
+    if (result != null && mounted) setState(() => _language = result);
+  }
+
+  Future<void> _pickDisplay() async {
+    final result = await _showGlassSheet<_DisplayMode>(
+      context,
+      _ChoiceSheet<_DisplayMode>(
+        title: 'Display',
+        selected: _displayMode,
+        options: [
+          for (final m in _DisplayMode.values)
+            _Option(value: m, label: m.label, icon: m.icon),
+        ],
+      ),
+    );
+    if (result != null && mounted) setState(() => _displayMode = result);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,8 +146,16 @@ class SettingsView extends StatelessWidget {
               const SizedBox(height: 20),
               _Group(
                 items: [
-                  const _Item('Notifications'),
-                  _Item('Display', onTap: () => _showDisplaySheet(context)),
+                  _Item(
+                    'Language',
+                    value: _language.label,
+                    onTap: _pickLanguage,
+                  ),
+                  _Item(
+                    'Display',
+                    value: _displayMode.label,
+                    onTap: _pickDisplay,
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -116,18 +187,243 @@ class SettingsView extends StatelessWidget {
       ),
     );
   }
+}
 
-  void _showDisplaySheet(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black54,
-      builder: (context) => const _DisplaySheet(),
+// ---------------------------------------------------------------------------
+// Glass sheet (Android 17 style blur)
+// ---------------------------------------------------------------------------
+
+Future<T?> _showGlassSheet<T>(BuildContext context, Widget child) {
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    // Light barrier so the blur has something to show.
+    barrierColor: Colors.black45,
+    builder: (_) => child,
+  );
+}
+
+class _GlassPanel extends StatelessWidget {
+  final double radius;
+  final Widget child;
+
+  const _GlassPanel({required this.radius, required this.child});
+
+  // Saturation ~1.6 so colors behind the glass stay lively.
+  static const List<double> _saturate = [
+    1.47244, -0.42912, -0.04332, 0, 0, //
+    -0.12756, 1.17088, -0.04332, 0, 0, //
+    -0.12756, -0.42912, 1.55668, 0, 0, //
+    0, 0, 0, 1, 0,
+  ];
+
+  static final ImageFilter _filter = ImageFilter.compose(
+    outer: const ColorFilter.matrix(_saturate),
+    inner: ImageFilter.blur(sigmaX: 28, sigmaY: 28, tileMode: TileMode.mirror),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final br = BorderRadius.circular(radius);
+    return ClipRRect(
+      borderRadius: br,
+      child: BackdropFilter(
+        filter: _filter,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: br,
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_C.glassTop, _C.glassBottom],
+            ),
+            border: Border.all(color: _C.glassBorder, width: 0.8),
+          ),
+          child: child,
+        ),
+      ),
     );
   }
 }
+
+class _Option<T> {
+  final T value;
+  final String label;
+  final IconData? icon;
+
+  const _Option({required this.value, required this.label, this.icon});
+}
+
+/// One simple sheet used for both Language and Display:
+/// a title and a few rows. Tapping a row selects it and closes the sheet
+/// (no radio buttons, no extra "Close" button).
+class _ChoiceSheet<T> extends StatefulWidget {
+  final String title;
+  final List<_Option<T>> options;
+  final T selected;
+
+  const _ChoiceSheet({
+    required this.title,
+    required this.options,
+    required this.selected,
+  });
+
+  @override
+  State<_ChoiceSheet<T>> createState() => _ChoiceSheetState<T>();
+}
+
+class _ChoiceSheetState<T> extends State<_ChoiceSheet<T>> {
+  late T _current = widget.selected;
+  bool _closing = false;
+
+  Future<void> _choose(T value) async {
+    if (_closing) return;
+    _closing = true;
+    HapticFeedback.selectionClick();
+    setState(() => _current = value);
+    // Short pause so the person sees the selection before it closes.
+    await Future<void>.delayed(const Duration(milliseconds: 160));
+    if (mounted) Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomInset),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: _GlassPanel(
+            radius: 30,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 18, 14, 12),
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        color: _C.text,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: _C.fontFamily,
+                      ),
+                    ),
+                  ),
+                  for (final o in widget.options)
+                    _OptionRow(
+                      label: o.label,
+                      icon: o.icon,
+                      selected: _current == o.value,
+                      onTap: () => _choose(o.value),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OptionRow extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _OptionRow({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        height: 54,
+        decoration: BoxDecoration(
+          color: selected ? _C.glassSelected : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: 22,
+                      color: selected ? _C.accent : _C.muted,
+                    ),
+                    const SizedBox(width: 14),
+                  ],
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: selected ? _C.accent : _C.text,
+                        fontSize: 17,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        fontFamily: _C.fontFamily,
+                      ),
+                    ),
+                  ),
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: selected ? 1 : 0,
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 22,
+                      color: _C.accent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Settings list
+// ---------------------------------------------------------------------------
 
 class _Group extends StatelessWidget {
   final List<_Item> items;
@@ -188,6 +484,18 @@ class _Tile extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (item.value != null) ...[
+                  Text(
+                    item.value!,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: _C.muted,
+                      fontSize: 15,
+                      fontFamily: _C.fontFamily,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 Icon(
                   item.external
                       ? Icons.north_east_rounded
@@ -197,194 +505,6 @@ class _Tile extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DisplaySheet extends StatefulWidget {
-  const _DisplaySheet();
-
-  @override
-  State<_DisplaySheet> createState() => _DisplaySheetState();
-}
-
-class _DisplaySheetState extends State<_DisplaySheet> {
-  _DisplayMode _selectedMode = _DisplayMode.automatic;
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomInset),
-      child: Material(
-        color: _C.surface,
-        borderRadius: BorderRadius.circular(28),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Display',
-                style: TextStyle(
-                  color: _C.text,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: _C.fontFamily,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Choose how Life looks on your device.',
-                style: TextStyle(
-                  color: _C.muted,
-                  fontSize: 14,
-                  height: 1.5,
-                  fontFamily: _C.fontFamily,
-                ),
-              ),
-              const SizedBox(height: 24),
-              _DisplayOption(
-                title: 'Automatic',
-                subtitle: 'Follow system settings',
-                icon: Icons.brightness_auto_rounded,
-                selected: _selectedMode == _DisplayMode.automatic,
-                onTap: () => _selectMode(_DisplayMode.automatic),
-              ),
-              const SizedBox(height: 8),
-              _DisplayOption(
-                title: 'Light Mode',
-                subtitle: 'Always use light appearance',
-                icon: Icons.light_mode_rounded,
-                selected: _selectedMode == _DisplayMode.light,
-                onTap: () => _selectMode(_DisplayMode.light),
-              ),
-              const SizedBox(height: 8),
-              _DisplayOption(
-                title: 'Dark Mode',
-                subtitle: 'Always use dark appearance',
-                icon: Icons.dark_mode_rounded,
-                selected: _selectedMode == _DisplayMode.dark,
-                onTap: () => _selectMode(_DisplayMode.dark),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFFFFF),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: _C.fontFamily,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _selectMode(_DisplayMode mode) {
-    setState(() {
-      _selectedMode = mode;
-    });
-  }
-}
-
-class _DisplayOption extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _DisplayOption({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? const Color(0xFF303031) : const Color(0xFF222223),
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(
-            children: [
-              Icon(icon, color: _C.text, size: 23),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: _C.text,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: _C.fontFamily,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: _C.muted,
-                        fontSize: 12,
-                        fontFamily: _C.fontFamily,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Icon(
-                selected
-                    ? Icons.radio_button_checked_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                size: 21,
-                color: selected ? _C.accent : Colors.white30,
-              ),
-            ],
           ),
         ),
       ),

@@ -16,8 +16,12 @@ abstract final class _C {
   static const active = Color(0xFFFFFFFF);
   // Dimmed color for unselected rows so the selected one stands out clearly.
   static const inactive = Color(0xFFA1A1A8);
-  static const tile = Color(0x0FFFFFFF); // white @ ~6%
-  static const tileSelected = Color(0x1FFFFFFF); // white @ ~12%
+
+  // ---- Android 17 style glass ------------------------------------------
+  static const glassTop = Color(0x99262628); // translucent surface (top)
+  static const glassBottom = Color(0x8019191A); // translucent surface (bottom)
+  static const glassBorder = Color(0x1FFFFFFF); // thin light edge
+  static const glassSelected = Color(0x26FFFFFF); // white @ ~15%
 
   // Change the font in ONE place (family name from pubspec.yaml).
   static const fontFamily = 'inter';
@@ -58,10 +62,18 @@ class _NavigationbarviewState extends State<Navigationbarview>
   // ---- Animation --------------------------------------------------------
   late final AnimationController _controller;
 
-  static const _spring = SpringDescription(
+  // Critically damped (ratio 1): no overshoot. The controller clamps to 0..1,
+  // so an underdamped spring would hit the end with speed and stop abruptly.
+  // Closing is a little softer than opening.
+  static final _openSpring = SpringDescription.withDampingRatio(
     mass: 1,
-    stiffness: 520,
-    damping: 38,
+    stiffness: 480,
+    ratio: 1,
+  );
+  static final _closeSpring = SpringDescription.withDampingRatio(
+    mass: 1,
+    stiffness: 400,
+    ratio: 1,
   );
 
   // ---- iOS-style sheet effect ------------------------------------------
@@ -111,7 +123,7 @@ class _NavigationbarviewState extends State<Navigationbarview>
       icon: Symbols.fitness_center_rounded,
       route: '/Gym',
     ),
-const _NavItem(
+    const _NavItem(
       label: 'Settings',
       icon: Symbols.settings_rounded,
       route: '/settings',
@@ -148,7 +160,7 @@ const _NavItem(
     }
 
     final simulation = SpringSimulation(
-      _spring,
+      expand ? _openSpring : _closeSpring,
       _controller.value,
       expand ? 1.0 : 0.0,
       velocity,
@@ -232,7 +244,15 @@ const _NavItem(
       _selectedIndex = index;
       _visited.add(index);
     });
-    _settle(false);
+
+    if (_isExpanded) {
+      // Short pause so the new selection is seen before the menu closes.
+      Future.delayed(const Duration(milliseconds: 130), () {
+        if (mounted && !_isDragging) _settle(false);
+      });
+    } else {
+      _settle(false);
+    }
   }
 
   Widget _pageFor(String route) {
@@ -422,74 +442,48 @@ const _NavItem(
                 onVerticalDragUpdate: _handleDragUpdate,
                 onVerticalDragEnd: _handleDragEnd,
                 onVerticalDragCancel: _handleDragCancel,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: _C.surface.withValues(alpha: 0.82),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: _C.border.withValues(alpha: 0.7),
-                      width: 0.7,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x26000000),
-                        blurRadius: 24,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(30),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                      child: Padding(
-                        padding: const EdgeInsets.all(3),
-                        child: AnimatedBuilder(
-                          animation: _controller,
-                          builder: (context, _) {
-                            final t = _controller.value;
+                child: _GlassPanel(
+                  radius: 30,
+                  child: Padding(
+                    padding: const EdgeInsets.all(3),
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, _) {
+                        final t = _controller.value;
 
-                            // Menu fades in a little after the drag starts,
-                            // the bar fades out quickly: a cross-fade.
-                            final menuOpacity = Curves.easeOut.transform(
-                              ((t - 0.08) / 0.5).clamp(0.0, 1.0),
-                            );
-                            final barOpacity = (1 - t * 2.2).clamp(0.0, 1.0);
+                        // The bar fades out early while opening and only
+                        // comes back once the menu is mostly gone, so the two
+                        // never overlap. Rows fade/slide with a stagger.
+                        final barOpacity = Curves.easeIn.transform(
+                          ((0.5 - t) / 0.4).clamp(0.0, 1.0),
+                        );
 
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ClipRect(
-                                  child: Align(
-                                    alignment: Alignment.topCenter,
-                                    heightFactor: t,
-                                    child: Opacity(
-                                      opacity: menuOpacity,
-                                      child: Transform.translate(
-                                        offset: Offset(0, (1 - t) * 14),
-                                        child: _buildExpandedMenu(),
-                                      ),
-                                    ),
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ClipRect(
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                heightFactor: t,
+                                child: _buildExpandedMenu(t),
+                              ),
+                            ),
+                            ClipRect(
+                              child: Align(
+                                alignment: Alignment.bottomCenter,
+                                heightFactor: 1 - t,
+                                child: IgnorePointer(
+                                  ignoring: t > 0.3,
+                                  child: Opacity(
+                                    opacity: barOpacity,
+                                    child: _buildMainBar(),
                                   ),
                                 ),
-                                ClipRect(
-                                  child: Align(
-                                    alignment: Alignment.bottomCenter,
-                                    heightFactor: 1 - t,
-                                    child: IgnorePointer(
-                                      ignoring: t > 0.3,
-                                      child: Opacity(
-                                        opacity: barOpacity,
-                                        child: _buildMainBar(),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -527,7 +521,7 @@ const _NavItem(
                   padding: const EdgeInsets.all(1),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: _C.selectedFill,
+                      color: _C.glassSelected,
                       borderRadius: BorderRadius.circular(_barHeight),
                     ),
                   ),
@@ -584,19 +578,84 @@ const _NavItem(
     );
   }
 
-  Widget _buildExpandedMenu() {
+  Widget _buildExpandedMenu(double t) {
+    const rowDelay = 0.035; // stagger between rows
+    const rowSpan = 0.45; // how much of `t` one row takes to appear
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 5, 4, 5),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           for (int index = 0; index < _allItems.length; index++)
-            _ListRow(
-              item: _allItems[index],
-              selected: _selectedIndex == index,
-              onTap: () => _selectItem(index),
+            Builder(
+              builder: (context) {
+                // Top rows appear first when opening; the bottom rows
+                // disappear first when closing (same curve, reversed t).
+                final p = Curves.easeOutCubic.transform(
+                  ((t - index * rowDelay) / rowSpan).clamp(0.0, 1.0),
+                );
+                return Opacity(
+                  opacity: p,
+                  child: Transform.translate(
+                    offset: Offset(0, (1 - p) * 10),
+                    child: _ListRow(
+                      item: _allItems[index],
+                      selected: _selectedIndex == index,
+                      onTap: () => _selectItem(index),
+                    ),
+                  ),
+                );
+              },
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Android 17 style frosted glass: strong blur + slight saturation boost on
+/// whatever is behind, a translucent surface tint, and a thin light edge.
+/// Used by the nav bar / expanded menu and the create button so they share
+/// exactly the same effect.
+class _GlassPanel extends StatelessWidget {
+  final double radius;
+  final Widget child;
+
+  const _GlassPanel({required this.radius, required this.child});
+
+  // Saturation ~1.6 so colors behind the glass stay lively.
+  static const List<double> _saturate = [
+    1.47244, -0.42912, -0.04332, 0, 0, //
+    -0.12756, 1.17088, -0.04332, 0, 0, //
+    -0.12756, -0.42912, 1.55668, 0, 0, //
+    0, 0, 0, 1, 0,
+  ];
+
+  static final ImageFilter _filter = ImageFilter.compose(
+    outer: const ColorFilter.matrix(_saturate),
+    inner: ImageFilter.blur(sigmaX: 28, sigmaY: 28, tileMode: TileMode.mirror),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final br = BorderRadius.circular(radius);
+    return ClipRRect(
+      borderRadius: br,
+      child: BackdropFilter(
+        filter: _filter,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: br,
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_C.glassTop, _C.glassBottom],
+            ),
+            border: Border.all(color: _C.glassBorder, width: 0.8),
+          ),
+          child: child,
+        ),
       ),
     );
   }
@@ -718,9 +777,9 @@ class _SplitButton extends StatelessWidget {
 }
 
 /// A single row of the expanded menu.
-/// Icon sits in a soft rounded tile, the label is larger and bolder, the
-/// selected row gets a filled background, bright text and a check mark;
-/// unselected rows are dimmed.
+/// Same language as the bar: a plain icon (no inner tile), a pill-shaped
+/// glass fill for the selected row, bright icon + text when selected and
+/// dimmed otherwise.
 class _ListRow extends StatelessWidget {
   final _NavItem item;
   final bool selected;
@@ -743,8 +802,8 @@ class _ListRow extends StatelessWidget {
         curve: Curves.easeOutCubic,
         height: 46,
         decoration: BoxDecoration(
-          color: selected ? _C.selectedFill : Colors.transparent,
-          borderRadius: BorderRadius.circular(22),
+          color: selected ? _C.glassSelected : Colors.transparent,
+          borderRadius: BorderRadius.circular(23),
         ),
         // Material + InkWell ABOVE the colored container so the ripple
         // is visible on top of the selected fill.
@@ -752,38 +811,26 @@ class _ListRow extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(23),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(7, 0, 14, 0),
+              padding: const EdgeInsets.fromLTRB(16, 0, 18, 0),
               child: Row(
                 children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: selected ? _C.tileSelected : _C.tile,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        item.icon,
-                        size: 20,
-                        weight: selected ? 700 : 600,
-                        fill: selected ? 1 : 0,
-                        color: color,
-                      ),
-                    ),
+                  Icon(
+                    item.icon,
+                    size: 24,
+                    weight: selected ? 700 : 500,
+                    fill: selected ? 1 : 0,
+                    color: color,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: AnimatedDefaultTextStyle(
                       duration: const Duration(milliseconds: 200),
                       style: TextStyle(
                         fontFamily: _C.fontFamily,
                         color: color,
-                        fontSize: 15,
+                        fontSize: 15.5,
                         height: 1.2,
                         letterSpacing: -0.2,
                         fontWeight: selected
@@ -795,16 +842,6 @@ class _ListRow extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ),
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 200),
-                    opacity: selected ? 1 : 0,
-                    child: const Icon(
-                      Symbols.check_rounded,
-                      size: 19,
-                      weight: 700,
-                      color: _C.active,
                     ),
                   ),
                 ],
@@ -829,40 +866,23 @@ class _CreateButton extends StatelessWidget {
       label: 'Create',
       child: Tooltip(
         message: 'Create',
-        child: Container(
+        child: SizedBox(
           width: 52,
           height: 52,
-          decoration: BoxDecoration(
-            color: _C.surface.withValues(alpha: 0.82),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: _C.border.withValues(alpha: 0.7),
-              width: 0.7,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x26000000),
-                blurRadius: 24,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipOval(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: Material(
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: onTap,
-                  child: const Center(
-                    child: Icon(
-                      Symbols.add_rounded,
-                      color: _C.active,
-                      size: 29,
-                      weight: 700,
-                    ),
+          child: _GlassPanel(
+            radius: 26,
+            child: Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onTap,
+                child: const Center(
+                  child: Icon(
+                    Symbols.add_rounded,
+                    color: _C.active,
+                    size: 29,
+                    weight: 700,
                   ),
                 ),
               ),

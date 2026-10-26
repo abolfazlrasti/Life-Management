@@ -28,7 +28,7 @@ class StyleView extends StatelessWidget {
                 color: Colors.black87,
               ),
               label: Text(
-                'Add Activity',
+                'Add clothing',
                 style: TextStyle(
                   fontSize: 18,
                   fontFamily: 'inter',

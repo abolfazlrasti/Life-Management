@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 enum _DayParity { none, even, odd }
@@ -43,16 +45,34 @@ class _AddPageState extends State<AddPage> {
   DateTime? _to;
 
   // ---- پالت رنگ ----
-  static const _bg = Color(0xFF0B0B0C); // پس‌زمینه اصلی (متن روی رنگ تأکیدی)
-  static const _sheet = Color(0xFF19191A); // بدنه‌ی شیت / کارت‌ها
-  static const _surface = Color(0xFF242426); // فیلدها و سطح برجسته
-  static const _selected = Color(0xFF303031); // آیتم انتخاب‌شده / دستگیره
-  static const _line = Color(0xFF29292B); // خطوط جداکننده
+  static const _bg = Color(0xFF0B0B0C); // متن روی رنگ تأکیدی
+  static const _sheet = Color(0xFF19191A);
+  static const _surface = Color(0xFF242426); // منوی دسته‌بندی / تایم‌پیکر
+  static const _line = Color(0xFF29292B); // خطوط منوی دسته‌بندی
   static const _text = Color(0xFFF5F5F5); // متن اصلی
   static const _textSec = Color(0xFFA1A1AA); // متن ثانویه
   static const _textDim = Color(0xFF66666E); // متن غیرفعال
   static const _accent = Color(0xFF64D9A0); // سبز نعنایی
   static const _error = Color(0xFFFF7777); // خطا
+
+  // ---- شیشه‌ی اندروید ۱۷ (همان مقادیر نوار ناوبری) ----
+  static const _glassTop = Color(0x99262628);
+  static const _glassBottom = Color(0x8019191A);
+  static const _glassBorder = Color(0x1FFFFFFF);
+  static const _field = Color(0x14FFFFFF); // فیلدها روی شیشه: سفید ~8%
+
+  // بلر قوی + کمی saturation تا رنگ‌های پشت شیشه زنده بمانند
+  static const List<double> _saturate = [
+    1.47244, -0.42912, -0.04332, 0, 0, //
+    -0.12756, 1.17088, -0.04332, 0, 0, //
+    -0.12756, -0.42912, 1.55668, 0, 0, //
+    0, 0, 0, 1, 0,
+  ];
+
+  static final ImageFilter _glassFilter = ImageFilter.compose(
+    outer: const ColorFilter.matrix(_saturate),
+    inner: ImageFilter.blur(sigmaX: 28, sigmaY: 28, tileMode: TileMode.mirror),
+  );
 
   static const _edge = 12.0; // فاصله دکمه‌ها از لبه
 
@@ -85,6 +105,30 @@ class _AddPageState extends State<AddPage> {
     }
   }
 
+  // ---------- شیشه ----------
+
+  /// پس‌زمینه‌ی شیشه‌ای: بلر + رنگ نیمه‌شفاف + مرز نازک.
+  Widget _glass({required BorderRadius radius, required Widget child}) {
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: _glassFilter,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_glassTop, _glassBottom],
+            ),
+            border: Border.all(color: _glassBorder, width: 0.8),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
   // ---------- ابزارهای کمکی ----------
 
   InputDecoration _dec(String label, {String? helper, bool alignHint = false}) {
@@ -100,7 +144,7 @@ class _AddPageState extends State<AddPage> {
       helperStyle: const TextStyle(color: _textDim),
       floatingLabelStyle: const TextStyle(color: _accent),
       filled: true,
-      fillColor: _surface,
+      fillColor: _field,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: b(null),
       enabledBorder: b(null),
@@ -194,9 +238,11 @@ class _AddPageState extends State<AddPage> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? _accent : _sheet,
+          color: selected ? _accent : _field,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? Colors.transparent : _line),
+          border: Border.all(
+            color: selected ? Colors.transparent : _glassBorder,
+          ),
         ),
         child: Text(
           label,
@@ -213,7 +259,7 @@ class _AddPageState extends State<AddPage> {
   Widget _timeBox(String label, DateTime? value, VoidCallback onTap) {
     return Expanded(
       child: Material(
-        color: _sheet,
+        color: _field,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -222,7 +268,7 @@ class _AddPageState extends State<AddPage> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _line),
+              border: Border.all(color: _glassBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,181 +373,194 @@ class _AddPageState extends State<AddPage> {
 
     final saved = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black54,
+      barrierColor: Colors.black45, // کمی روشن‌تر تا بلر دیده شود
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) {
           return Dialog(
-            backgroundColor: _surface,
+            backgroundColor: Colors.transparent,
             surfaceTintColor: Colors.transparent,
+            elevation: 0,
             insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: const BorderSide(color: _line),
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Schedule',
-                    style: TextStyle(
-                      color: _text,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+            child: _glass(
+              radius: BorderRadius.circular(28),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Schedule',
+                      style: TextStyle(
+                        color: _text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // فقط امروز
-                  InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () => setS(() => onlyToday = !onlyToday),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: Checkbox(
-                              value: onlyToday,
-                              onChanged: (v) =>
-                                  setS(() => onlyToday = v ?? false),
-                              activeColor: _accent,
-                              checkColor: _bg,
-                              side: const BorderSide(color: _textSec),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                    // فقط امروز
+                    InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => setS(() => onlyToday = !onlyToday),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: Checkbox(
+                                value: onlyToday,
+                                onChanged: (v) =>
+                                    setS(() => onlyToday = v ?? false),
+                                activeColor: _accent,
+                                checkColor: _bg,
+                                side: const BorderSide(color: _textSec),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Only today (${_fmtDate(DateTime.now())})',
-                            style: const TextStyle(color: _text, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // روزها (وقتی «فقط امروز» روشن است غیرفعال می‌شود)
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 150),
-                    opacity: onlyToday ? 0.3 : 1,
-                    child: IgnorePointer(
-                      ignoring: onlyToday,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _sectionLabel('Repeat'),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _pill('Even days', parity == _DayParity.even, () {
-                                setS(
-                                  () => parity = parity == _DayParity.even
-                                      ? _DayParity.none
-                                      : _DayParity.even,
-                                );
-                              }),
-                              _pill('Odd days', parity == _DayParity.odd, () {
-                                setS(
-                                  () => parity = parity == _DayParity.odd
-                                      ? _DayParity.none
-                                      : _DayParity.odd,
-                                );
-                              }),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          _sectionLabel('Days'),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: List.generate(7, (i) {
-                              return _pill(_dayNames[i], days.contains(i), () {
-                                setS(() {
-                                  days.contains(i)
-                                      ? days.remove(i)
-                                      : days.add(i);
-                                });
-                              });
-                            }),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ساعت
-                  _sectionLabel('Time'),
-                  Row(
-                    children: [
-                      _timeBox('From', from, () async {
-                        final t = await _pickTime(ctx, from);
-                        if (t != null) {
-                          setS(() {
-                            from = t;
-                            timeError = null;
-                          });
-                        }
-                      }),
-                      const SizedBox(width: 10),
-                      _timeBox('To', to, () async {
-                        final t = await _pickTime(ctx, to);
-                        if (t != null) {
-                          setS(() {
-                            to = t;
-                            timeError = null;
-                          });
-                        }
-                      }),
-                    ],
-                  ),
-                  if (timeError != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      timeError!,
-                      style: const TextStyle(color: _error, fontSize: 12),
-                    ),
-                  ],
-                  const SizedBox(height: 22),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: TextButton(
-                      onPressed: () {
-                        if (from != null && to != null && !to!.isAfter(from!)) {
-                          setS(
-                            () =>
-                                timeError = 'End time must be after start time',
-                          );
-                          return;
-                        }
-                        Navigator.pop(ctx, true);
-                      },
-                      style: TextButton.styleFrom(
-                        backgroundColor: _accent,
-                        foregroundColor: _bg,
-                        shape: const StadiumBorder(),
-                      ),
-                      child: const Text(
-                        'Done',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                            const SizedBox(width: 12),
+                            Text(
+                              'Only today (${_fmtDate(DateTime.now())})',
+                              style: const TextStyle(
+                                color: _text,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+
+                    // روزها (وقتی «فقط امروز» روشن است غیرفعال می‌شود)
+                    AnimatedOpacity(
+                      duration: const Duration(milliseconds: 150),
+                      opacity: onlyToday ? 0.3 : 1,
+                      child: IgnorePointer(
+                        ignoring: onlyToday,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _sectionLabel('Repeat'),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _pill(
+                                  'Even days',
+                                  parity == _DayParity.even,
+                                  () {
+                                    setS(
+                                      () => parity = parity == _DayParity.even
+                                          ? _DayParity.none
+                                          : _DayParity.even,
+                                    );
+                                  },
+                                ),
+                                _pill('Odd days', parity == _DayParity.odd, () {
+                                  setS(
+                                    () => parity = parity == _DayParity.odd
+                                        ? _DayParity.none
+                                        : _DayParity.odd,
+                                  );
+                                }),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _sectionLabel('Days'),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: List.generate(7, (i) {
+                                return _pill(
+                                  _dayNames[i],
+                                  days.contains(i),
+                                  () {
+                                    setS(() {
+                                      days.contains(i)
+                                          ? days.remove(i)
+                                          : days.add(i);
+                                    });
+                                  },
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ساعت
+                    _sectionLabel('Time'),
+                    Row(
+                      children: [
+                        _timeBox('From', from, () async {
+                          final t = await _pickTime(ctx, from);
+                          if (t != null) {
+                            setS(() {
+                              from = t;
+                              timeError = null;
+                            });
+                          }
+                        }),
+                        const SizedBox(width: 10),
+                        _timeBox('To', to, () async {
+                          final t = await _pickTime(ctx, to);
+                          if (t != null) {
+                            setS(() {
+                              to = t;
+                              timeError = null;
+                            });
+                          }
+                        }),
+                      ],
+                    ),
+                    if (timeError != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        timeError!,
+                        style: const TextStyle(color: _error, fontSize: 12),
+                      ),
+                    ],
+                    const SizedBox(height: 22),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: TextButton(
+                        onPressed: () {
+                          if (from != null &&
+                              to != null &&
+                              !to!.isAfter(from!)) {
+                            setS(
+                              () => timeError =
+                                  'End time must be after start time',
+                            );
+                            return;
+                          }
+                          Navigator.pop(ctx, true);
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: _accent,
+                          foregroundColor: _bg,
+                          shape: const StadiumBorder(),
+                        ),
+                        child: const Text(
+                          'Done',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -531,7 +590,7 @@ class _AddPageState extends State<AddPage> {
   }) {
     return Material(
       key: key,
-      color: _surface,
+      color: _field,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -577,168 +636,168 @@ class _AddPageState extends State<AddPage> {
         curve: Curves.easeOut,
         transform: Matrix4.translationValues(0, _dragY, 0),
         margin: EdgeInsets.only(top: topInset + 8),
-        decoration: const BoxDecoration(
-          color: _sheet,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          children: [
-            // دستگیره: با کشیدن به پایین، صفحه بسته می‌شود
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onVerticalDragUpdate: _onDragUpdate,
-              onVerticalDragEnd: _onDragEnd,
-              child: SizedBox(
-                width: double.infinity,
-                height: 24,
-                child: Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: _selected,
-                      borderRadius: BorderRadius.circular(2),
+        // به‌جای رنگ مات _sheet، کل شیت شیشه‌ای است
+        child: _glass(
+          radius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: Column(
+            children: [
+              // دستگیره: با کشیدن به پایین، صفحه بسته می‌شود
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragUpdate: _onDragUpdate,
+                onVerticalDragEnd: _onDragEnd,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 24,
+                  child: Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            // هدر: Cancel | New Page | ✓
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: _edge),
-              child: SizedBox(
-                height: 40,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Text(
-                      'New Page',
-                      style: TextStyle(
-                        color: _text,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          backgroundColor: _surface,
-                          foregroundColor: _text,
-                          fixedSize: const Size(72, 36),
-                          padding: EdgeInsets.zero,
-                          shape: const StadiumBorder(
-                            side: BorderSide(color: _line),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        onPressed: () {
-                          if (_formKey.currentState?.validate() ?? false) {
-                            // TODO: save
-                            // نام: _nameCtrl.text | دسته: _itemselet
-                            // امروز: _onlyToday (_todayDate)
-                            // روزها: _days (0=شنبه..6=جمعه) | زوج/فرد: _parity
-                            // ساعت: _from تا _to (DateTime)
-                            // توضیحات: _descCtrl.text
-                          }
-                        },
-                        icon: const Icon(Icons.check, color: _bg, size: 20),
-                        style: IconButton.styleFrom(
-                          backgroundColor: _text,
-                          fixedSize: const Size(36, 36),
-                          minimumSize: const Size(36, 36),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // بدنه
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              // هدر: Cancel | New Page | ✓
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: _edge),
+                child: SizedBox(
+                  height: 40,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      TextFormField(
-                        controller: _nameCtrl,
-                        cursorColor: _accent,
-                        cursorErrorColor: _error,
-                        style: const TextStyle(color: _text),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Please enter a name'
-                            : null,
-                        decoration: _dec(
-                          'Activity Name',
-                          helper: 'Enter the name of your activity',
+                      const Text(
+                        'New Page',
+                        style: TextStyle(
+                          color: _text,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 16),
-
-                      // دسته‌بندی + زمان‌بندی کنار هم
-                      // IntrinsicHeight: جلوگیری از ارتفاع نامحدود داخل اسکرول
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: _pickerField(
-                                key: _categoryKey,
-                                label: 'Category',
-                                value: _itemselet,
-                                onTap: _pickCategory,
-                              ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            backgroundColor: _field,
+                            foregroundColor: _text,
+                            fixedSize: const Size(72, 36),
+                            padding: EdgeInsets.zero,
+                            shape: const StadiumBorder(
+                              side: BorderSide(color: _glassBorder),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _pickerField(
-                                label: 'Schedule',
-                                value: _scheduleSummary,
-                                onTap: _pickSchedule,
-                              ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-
-                      // توضیحات
-                      TextFormField(
-                        controller: _descCtrl,
-                        minLines: 4,
-                        maxLines: 6,
-                        keyboardType: TextInputType.multiline,
-                        textCapitalization: TextCapitalization.sentences,
-                        cursorColor: _accent,
-                        style: const TextStyle(color: _text),
-                        decoration: _dec('Description', alignHint: true),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          onPressed: () {
+                            if (_formKey.currentState?.validate() ?? false) {
+                              // TODO: save
+                              // نام: _nameCtrl.text | دسته: _itemselet
+                              // امروز: _onlyToday (_todayDate)
+                              // روزها: _days (0=شنبه..6=جمعه) | زوج/فرد: _parity
+                              // ساعت: _from تا _to (DateTime)
+                              // توضیحات: _descCtrl.text
+                            }
+                          },
+                          icon: const Icon(Icons.check, color: _bg, size: 20),
+                          style: IconButton.styleFrom(
+                            backgroundColor: _text,
+                            fixedSize: const Size(36, 36),
+                            minimumSize: const Size(36, 36),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
-          ],
+
+              // بدنه
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextFormField(
+                          controller: _nameCtrl,
+                          cursorColor: _accent,
+                          cursorErrorColor: _error,
+                          style: const TextStyle(color: _text),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Please enter a name'
+                              : null,
+                          decoration: _dec(
+                            'Activity Name',
+                            helper: 'Enter the name of your activity',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // دسته‌بندی + زمان‌بندی کنار هم
+                        // IntrinsicHeight: جلوگیری از ارتفاع نامحدود داخل اسکرول
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _pickerField(
+                                  key: _categoryKey,
+                                  label: 'Category',
+                                  value: _itemselet,
+                                  onTap: _pickCategory,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _pickerField(
+                                  label: 'Schedule',
+                                  value: _scheduleSummary,
+                                  onTap: _pickSchedule,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // توضیحات
+                        TextFormField(
+                          controller: _descCtrl,
+                          minLines: 4,
+                          maxLines: 6,
+                          keyboardType: TextInputType.multiline,
+                          textCapitalization: TextCapitalization.sentences,
+                          cursorColor: _accent,
+                          style: const TextStyle(color: _text),
+                          decoration: _dec('Description', alignHint: true),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

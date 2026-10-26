@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:live/core/Theme/theme_color.dart';
 
 import 'ui/navigation/navigationBar.dart';
 import 'Routes/routes.dart';
@@ -12,37 +13,6 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(AppTheme.systemOverlay);
 
   runApp(const MyApp());
-}
-
-class AppColors {
-  // پس‌زمینه‌ها و سطوح
-  static const background = Color(0xFF0B0B0C); // پس‌زمینه اصلی
-  static const backgroundSecondary = Color(0xFF111113); // پس‌زمینه ثانویه
-  static const surface = Color(0xFF19191A); // کارت‌ها و سطوح
-  static const surfaceElevated = Color(0xFF242426); // سطح برجسته
-  static const selected = Color(0xFF303031); // آیتم انتخاب‌شده
-  static const divider = Color(0xFF29292B); // خطوط جداکننده
-
-  // متن
-  static const textPrimary = Color(0xFFF5F5F5);
-  static const textSecondary = Color(0xFFA1A1AA);
-  static const textDisabled = Color(0xFF66666E);
-
-  // رنگ‌های معنایی
-  static const accent = Color(0xFF64D9A0); // سبز نعنایی
-  static const success = Color(0xFF4ADE80);
-  static const warning = Color(0xFFFBBF24);
-  static const error = Color(0xFFFF7777); // خطا و هزینه
-
-  // نام‌های قدیمی برای اینکه فایل‌های دیگه‌ات نشکنن
-  static const border = divider;
-  static const primary = textPrimary; // متن اصلی
-  static const secondary = textSecondary; // متن ثانویه
-  static const tertiary = textDisabled; // غیرفعال / کم‌اهمیت
-  static const accentSoft = accent; // لینک و متن رنگی
-
-  // متن روی رنگ تأکیدی (چون سبز نعنایی روشنه، متن باید تیره باشه)
-  static const onAccent = background;
 }
 
 class AppTheme {
@@ -81,8 +51,8 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: AppColors.accent,
         onPrimary: AppColors.onAccent,
-        secondary: AppColors.accent,
-        onSecondary: AppColors.onAccent,
+        secondary: AppColors.accentSoft,
+        onSecondary: AppColors.background,
         error: AppColors.error,
         onError: AppColors.background,
         surface: AppColors.background,
@@ -200,7 +170,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.accent,
+          foregroundColor: AppColors.accentSoft,
           minimumSize: const Size(0, 44),
           shape: shape,
           textStyle: const TextStyle(
@@ -223,7 +193,7 @@ class AppTheme {
         fillColor: AppColors.surface,
         hintStyle: const TextStyle(color: AppColors.textDisabled, fontSize: 14),
         labelStyle: const TextStyle(color: AppColors.textSecondary),
-        floatingLabelStyle: const TextStyle(color: AppColors.accent),
+        floatingLabelStyle: const TextStyle(color: AppColors.accentSoft),
         errorStyle: const TextStyle(color: AppColors.error, fontSize: 12),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -231,15 +201,15 @@ class AppTheme {
         ),
         border: _inputBorder(AppColors.divider),
         enabledBorder: _inputBorder(AppColors.divider),
-        focusedBorder: _inputBorder(AppColors.accent, 1.5),
+        focusedBorder: _inputBorder(AppColors.accentSoft, 1.5),
         errorBorder: _inputBorder(AppColors.error),
         focusedErrorBorder: _inputBorder(AppColors.error, 1.5),
         disabledBorder: _inputBorder(AppColors.divider),
       ),
       textSelectionTheme: TextSelectionThemeData(
-        cursorColor: AppColors.accent,
-        selectionColor: AppColors.accent.withValues(alpha: 0.30),
-        selectionHandleColor: AppColors.accent,
+        cursorColor: AppColors.accentSoft,
+        selectionColor: AppColors.accent.withValues(alpha: 0.35),
+        selectionHandleColor: AppColors.accentSoft,
       ),
 
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -288,7 +258,7 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.surfaceElevated,
-        actionTextColor: AppColors.accent,
+        actionTextColor: AppColors.accentSoft,
         elevation: 0,
         contentTextStyle: const TextStyle(
           fontFamily: 'inter',
@@ -333,7 +303,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surface,
-        selectedColor: AppColors.selected,
+        selectedColor: AppColors.accent.withValues(alpha: 0.28),
         side: const BorderSide(color: AppColors.divider),
         labelStyle: const TextStyle(
           fontFamily: 'inter',
@@ -345,7 +315,7 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           return states.contains(WidgetState.selected)
-              ? AppColors.background
+              ? Colors.white
               : AppColors.textSecondary;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {

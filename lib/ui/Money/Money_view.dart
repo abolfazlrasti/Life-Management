@@ -28,7 +28,7 @@ class Moneyview extends StatelessWidget {
                 color: Colors.black87,
               ),
               label: Text(
-                'Add Activity',
+                'Add Income',
                 style: TextStyle(
                   fontSize: 18,
                   fontFamily: 'inter',

@@ -161,7 +161,7 @@ class _SettingsViewState extends State<SettingsView> {
               const SizedBox(height: 20),
               const _Group(
                 items: [
-                  _Item('Rate Life', external: true),
+                  _Item('Rate Liva', external: true),
                   _Item('Send feedback', external: true),
                   _Item('Support', external: true),
                   _Item('Privacy', external: true),
@@ -173,7 +173,7 @@ class _SettingsViewState extends State<SettingsView> {
               const SizedBox(height: 40),
               const Center(
                 child: Text(
-                  'Life for Android 0.0.1 (1)',
+                  'Liva for Android 0.0.1 (1)',
                   style: TextStyle(
                     color: Colors.white54,
                     fontSize: 13,

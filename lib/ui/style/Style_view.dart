@@ -17,46 +17,7 @@ class StyleView extends StatelessWidget {
           ),
         ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextButton.icon(
-              icon: Icon(
-                Icons.add_circle_outline_rounded,
-                size: 22,
-                color: Colors.black87,
-              ),
-              label: Text(
-                'Add clothing',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontFamily: 'inter',
-                  color: Colors.black87,
-                ),
-              ),
-              onPressed: () {},
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white,
-                elevation: 2,
-                shadowColor: Colors.white,
-                side: BorderSide(color: Colors.white60, width: 7),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadiusGeometry.circular(16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.center,
-              child: Text(
-                'Add your new activity',
-                style: TextStyle(fontSize: 14, fontFamily: 'inter'),
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: Center(child: Text('Coming soon', style: TextStyle(fontSize: 24))),
     );
   }
 }

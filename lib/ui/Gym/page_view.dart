@@ -7,11 +7,9 @@ import 'package:flutter/services.dart';
 abstract final class _C {
   static const glassTop = Color(0x99262628);
   static const glassBottom = Color(0x8019191A);
-  static const glassBorder = Color(0x1FFFFFFF);
-  static const searchFill = Color(0x2EFFFFFF);
+  static const searchFill = Color(0x1FFFFFFF);
   static const itemBg = Color(0xFF2D2D2F);
   static const imageBg = Color(0xFF353537);
-  static const chipBg = Color(0xFF39393B);
   static const text = Color(0xFFF4F4F5);
   static const textSec = Color(0xFFA1A1AA);
   static const textDim = Color(0xFF6B6B74);
@@ -50,7 +48,7 @@ class GymPageView extends StatefulWidget {
 class _GymPageViewState extends State<GymPageView> {
   static const double _sheetRadius =
       32; // گردی بالای صفحه = گردی گوشه‌های بیرونی لیست
-  static const double _innerRadius = 10; // گردی گزینه‌های وسط
+  static const double _innerRadius = 8; // گردی گزینه‌های وسط
 
   static const List<double> _saturate = [
     1.47244, -0.42912, -0.04332, 0, 0, //
@@ -258,6 +256,11 @@ class _GymPageViewState extends State<GymPageView> {
   // ───────────────────────── Header ─────────────────────────
 
   Widget _searchBar() {
+    const border = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(999)),
+      borderSide: BorderSide.none,
+    );
+
     return TextField(
       controller: _searchCtrl,
       onChanged: _onQueryChanged,
@@ -267,82 +270,86 @@ class _GymPageViewState extends State<GymPageView> {
       textAlignVertical: TextAlignVertical.center,
       style: const TextStyle(
         color: _C.text,
-        fontSize: 16,
+        fontSize: 15,
         fontFamily: _C.fontFamily,
       ),
       decoration: InputDecoration(
-        hintText: 'Search exercises',
+        hintText: 'Search',
         hintStyle: const TextStyle(
           color: _C.textSec,
-          fontSize: 16,
+          fontSize: 15,
           fontFamily: _C.fontFamily,
         ),
         filled: true,
         fillColor: _C.searchFill,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 18),
-        prefixIcon: const Padding(
-          padding: EdgeInsets.only(left: 12, right: 4),
-          child: Icon(Icons.search_rounded, color: _C.text, size: 24),
+        contentPadding: const EdgeInsets.symmetric(vertical: 15),
+        prefixIcon: const Icon(
+          Icons.search_rounded,
+          color: _C.textSec,
+          size: 20,
         ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 48),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 46,
+          minHeight: 48,
+        ),
         suffixIcon: _query.isEmpty
             ? null
-            : Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: IconButton(
-                  onPressed: _clearSearch,
-                  icon: const Icon(Icons.close_rounded, size: 20),
-                  color: _C.textSec,
-                ),
+            : IconButton(
+                onPressed: _clearSearch,
+                icon: const Icon(Icons.close_rounded, size: 18),
+                color: _C.textSec,
+                visualDensity: VisualDensity.compact,
               ),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(999)),
-          borderSide: BorderSide.none,
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 46,
+          minHeight: 48,
         ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(999)),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(999)),
-          borderSide: BorderSide.none,
+        border: border,
+        enabledBorder: border,
+        focusedBorder: border,
+      ),
+    );
+  }
+
+  /// فقط دستگیره ثابت می‌ماند
+  Widget _handle() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 6),
+      child: Center(
+        child: Container(
+          width: 36,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Colors.white24,
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
       ),
     );
   }
 
+  /// عنوان + سرچ‌بار؛ همراه لیست اسکرول می‌شوند و بالا می‌روند
   Widget _header() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 10, bottom: 10),
-          child: Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(2),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 14),
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Exercises',
+              style: TextStyle(
+                color: _C.text,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                fontFamily: _C.fontFamily,
+              ),
             ),
           ),
-        ),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 16),
-          child: Text(
-            'Exercises',
-            style: TextStyle(
-              color: _C.text,
-              fontSize: 24,
-              fontWeight: FontWeight.w500,
-              fontFamily: _C.fontFamily,
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: _searchBar(),
-        ),
-      ],
+          _searchBar(),
+        ],
+      ),
     );
   }
 
@@ -356,11 +363,11 @@ class _GymPageViewState extends State<GymPageView> {
   }) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: _C.textDim),
+            Icon(icon, size: 36, color: _C.textDim),
             const SizedBox(height: 12),
             Text(
               title,
@@ -372,7 +379,7 @@ class _GymPageViewState extends State<GymPageView> {
               ),
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
@@ -394,12 +401,12 @@ class _GymPageViewState extends State<GymPageView> {
     const fallback = Icon(
       Icons.fitness_center_rounded,
       color: _C.textSec,
-      size: 24,
+      size: 20,
     );
 
     return Container(
-      width: 56,
-      height: 56,
+      width: 44,
+      height: 44,
       decoration: const BoxDecoration(
         color: _C.imageBg,
         shape: BoxShape.circle,
@@ -410,16 +417,16 @@ class _GymPageViewState extends State<GymPageView> {
           : Image.network(
               ex.imageUrl,
               fit: BoxFit.cover,
-              cacheWidth: 168,
+              cacheWidth: 132,
               filterQuality: FilterQuality.low,
               loadingBuilder: (context, child, progress) {
                 if (progress == null) return child;
                 return const Center(
                   child: SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(
-                      strokeWidth: 1.8,
+                      strokeWidth: 1.6,
                       color: _C.textSec,
                     ),
                   ),
@@ -442,7 +449,7 @@ class _GymPageViewState extends State<GymPageView> {
     );
 
     return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 4),
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 2),
       child: Material(
         color: _C.itemBg,
         borderRadius: radius,
@@ -451,12 +458,12 @@ class _GymPageViewState extends State<GymPageView> {
           onTap: () => _selectExercise(ex),
           borderRadius: radius,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 84),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            constraints: const BoxConstraints(minHeight: 64),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
                 _exerciseImage(ex),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,21 +476,21 @@ class _GymPageViewState extends State<GymPageView> {
                         style: const TextStyle(
                           color: _C.text,
                           fontSize: 15,
-                          height: 1.3,
+                          height: 1.25,
                           fontWeight: FontWeight.w500,
                           fontFamily: _C.fontFamily,
                         ),
                       ),
                       if (ex.subtitle.isNotEmpty) ...[
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         Text(
                           ex.subtitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: _C.textSec,
-                            fontSize: 13,
-                            height: 1.3,
+                            fontSize: 12.5,
+                            height: 1.25,
                             fontFamily: _C.fontFamily,
                           ),
                         ),
@@ -491,20 +498,8 @@ class _GymPageViewState extends State<GymPageView> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: const BoxDecoration(
-                    color: _C.chipBg,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.add_rounded,
-                    color: _C.text,
-                    size: 20,
-                  ),
-                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.add_rounded, color: _C.textDim, size: 20),
               ],
             ),
           ),
@@ -513,13 +508,74 @@ class _GymPageViewState extends State<GymPageView> {
     );
   }
 
-  Widget _exerciseList(List<_Exercise> items) {
-    return ListView.builder(
+  /// بدنه‌ی اسکرول: هدر + (لودینگ | خطا | خالی | لیست)
+  Widget _scrollBody() {
+    final Widget bodySliver;
+
+    if (_loading) {
+      bodySliver = SliverFillRemaining(
+        hasScrollBody: false,
+        child: _message(
+          icon: Icons.fitness_center_rounded,
+          title: 'Loading exercises',
+          action: const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: _C.accentSoft,
+            ),
+          ),
+        ),
+      );
+    } else if (_error != null) {
+      bodySliver = SliverFillRemaining(
+        hasScrollBody: false,
+        child: _message(
+          icon: Icons.error_outline_rounded,
+          title: _error!,
+          subtitle: 'Check the asset path and JSON file.',
+          action: TextButton(
+            onPressed: _loadExercises,
+            child: const Text('Try again'),
+          ),
+        ),
+      );
+    } else if (_results.isEmpty) {
+      final hasQuery = _query.trim().isNotEmpty;
+      bodySliver = SliverFillRemaining(
+        hasScrollBody: false,
+        child: _message(
+          icon: hasQuery
+              ? Icons.search_off_rounded
+              : Icons.fitness_center_rounded,
+          title: hasQuery ? 'No exercises found' : 'No exercises available',
+          subtitle: hasQuery
+              ? 'Try a different name, muscle or equipment.'
+              : null,
+        ),
+      );
+    } else {
+      final items = _results;
+      bodySliver = SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        sliver: SliverList.builder(
+          itemCount: items.length,
+          itemBuilder: (context, index) =>
+              _exerciseTile(items[index], index, items.length),
+        ),
+      );
+    }
+
+    return CustomScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.only(bottom: 16),
-      itemCount: items.length,
-      itemBuilder: (context, index) =>
-          _exerciseTile(items[index], index, items.length),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      slivers: [
+        SliverToBoxAdapter(child: _header()),
+        bodySliver,
+      ],
     );
   }
 
@@ -555,46 +611,8 @@ class _GymPageViewState extends State<GymPageView> {
             SafeArea(
               child: Column(
                 children: [
-                  _header(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                      child: _loading
-                          ? _message(
-                              icon: Icons.fitness_center_rounded,
-                              title: 'Loading exercises',
-                              action: const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: _C.accentSoft,
-                                ),
-                              ),
-                            )
-                          : _error != null
-                          ? _message(
-                              icon: Icons.error_outline_rounded,
-                              title: _error!,
-                              subtitle: 'Check the asset path and JSON file.',
-                              action: TextButton(
-                                onPressed: _loadExercises,
-                                child: const Text('Try again'),
-                              ),
-                            )
-                          : _results.isEmpty
-                          ? _message(
-                              icon: _query.trim().isEmpty
-                                  ? Icons.fitness_center_rounded
-                                  : Icons.search_off_rounded,
-                              title: _query.trim().isEmpty
-                                  ? 'No exercises available'
-                                  : 'No exercises found',
-                              subtitle: _query.trim().isEmpty ? null : 'Try a different name, muscle or equipment.',
-                            )
-                          : _exerciseList(_results),
-                    ),
-                  ),
+                  _handle(),
+                  Expanded(child: _scrollBody()),
                 ],
               ),
             ),

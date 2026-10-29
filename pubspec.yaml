@@ -37,6 +37,7 @@ dependencies:
   flutter_native_splash: ^2.4.8
   material_symbols_icons: ^4.2960.0
   shamsi_date: ^1.1.1
+  hijri: ^3.0.1
 
 dev_dependencies:
   flutter_test:
